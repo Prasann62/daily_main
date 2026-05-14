@@ -452,45 +452,58 @@ function generatePDF(data) {
     
     const paramRows = parameters.map((param, index) => `
         <tr>
-            <td style="text-align: center;">${index + 1}</td>
-            <td>${param}</td>
-            <td style="text-align: center;">${data['status_'+index] || ''}</td>
-            <td>${data['action_'+index] || ''}</td>
-            <td>${data['remarks_'+index] || ''}</td>
+            <td style="text-align: center; border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${index + 1}</td>
+            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px; word-wrap: break-word;">${param}</td>
+            <td style="text-align: center; border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['status_'+index] || ''}</td>
+            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['action_'+index] || ''}</td>
+            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['remarks_'+index] || ''}</td>
         </tr>
     `).join('');
 
     pdfDiv.innerHTML = `
-        <h2 style="text-transform: uppercase;">${state.currentMachine} - ${state.currentCategory} DAILY MAINTENANCE</h2>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <p><strong>DATE:</strong> ${data.date}</p>
-            <p><strong>SHIFT:</strong> ${data.shift}</p>
-        </div>
-        <p style="margin-bottom: 20px;"><strong>PRODUCT:</strong> ${data.product}</p>
-        
-        <table>
-            <thead>
-                <tr style="background: #f0f0f0;">
-                    <th>SL.NO</th>
-                    <th>PARAMETERS</th>
-                    <th>STATUS</th>
-                    <th>TAKEN ACTION</th>
-                    <th>REMARKS</th>
+        <div style="font-family: Arial, sans-serif; color: #000; background: #fff; padding: 15px; width: 100%;">
+            <h2 style="text-align: center; text-transform: uppercase; font-size: 16px; margin-bottom: 15px; color: #000;">${state.currentMachine} - ${state.currentCategory} DAILY MAINTENANCE</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                <tr>
+                    <td style="border: none; padding: 3px 0; font-size: 13px; width: 50%;"><strong>DATE:</strong> ${data.date}</td>
+                    <td style="border: none; padding: 3px 0; font-size: 13px; width: 50%; text-align: right;"><strong>SHIFT:</strong> ${data.shift}</td>
                 </tr>
-            </thead>
-            <tbody>
-                ${paramRows}
-            </tbody>
-        </table>
+                <tr>
+                    <td colspan="2" style="border: none; padding: 3px 0; font-size: 13px;"><strong>PRODUCT:</strong> ${data.product}</td>
+                </tr>
+            </table>
+            
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                <colgroup>
+                    <col style="width: 6%">
+                    <col style="width: 44%">
+                    <col style="width: 10%">
+                    <col style="width: 20%">
+                    <col style="width: 20%">
+                </colgroup>
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">SL.NO</th>
+                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: left;">PARAMETERS</th>
+                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">STATUS</th>
+                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">TAKEN ACTION</th>
+                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">REMARKS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${paramRows}
+                </tbody>
+            </table>
 
-        <div class="signatures">
-            <div class="sig-box">
-                ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
-                <p>Checked by Signature</p>
-            </div>
-            <div class="sig-box">
-                ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
-                <p>Manager Signature</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 40px;">
+                <div style="width: 200px; text-align: center;">
+                    ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div style="border-bottom: 1px solid #000; height: 35px; margin-bottom: 5px;"></div>'}
+                    <p style="font-size: 12px; margin: 0;">Checked by Signature</p>
+                </div>
+                <div style="width: 200px; text-align: center;">
+                    ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div style="border-bottom: 1px solid #000; height: 35px; margin-bottom: 5px;"></div>'}
+                    <p style="font-size: 12px; margin: 0;">Manager Signature</p>
+                </div>
             </div>
         </div>
     `;
