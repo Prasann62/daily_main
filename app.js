@@ -504,6 +504,9 @@ function generatePDF(data) {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(pdfDiv).save().then(() => {
         document.body.removeChild(pdfDiv);
+        if (mainContainer) mainContainer.style.display = 'flex';
+        state.downloads++;
+        updateCounter();
         renderSuccess();
     });
 }
@@ -520,6 +523,7 @@ function generateHourlyPDF(data) {
 
     const thStyle = `border:1px solid #000;padding:5px 3px;font-size:8px;font-weight:700;text-align:center;background:#e8e8e8;color:#000;`;
     const tdStyle = `border:1px solid #000;padding:5px 4px;font-size:9px;text-align:center;color:#000;`;
+    const defDataStyle = `border:1px solid #000;padding:4px 2px;font-size:8px;text-align:center;color:#000;`;
 
     const processingRows = ['NOZZLE', '1', '2', '3'].map((zone, idx) => `
         <tr>
