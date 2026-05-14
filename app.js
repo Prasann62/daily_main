@@ -495,18 +495,23 @@ function generatePDF(data) {
         </div>
     `;
 
+    const mainContainer = document.querySelector('.app-container');
+    if (mainContainer) mainContainer.style.display = 'none';
+    
     document.body.appendChild(pdfDiv);
+    window.scrollTo(0, 0);
 
     const opt = {
         margin:       10,
         filename:     `Maintenance_${state.currentMachine}_${data.date}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(pdfDiv).save().then(() => {
         document.body.removeChild(pdfDiv);
+        if (mainContainer) mainContainer.style.display = 'flex';
         state.downloads++;
         updateCounter();
         renderSuccess();
@@ -617,18 +622,23 @@ function generateHourlyPDF(data) {
         </div>
     `;
 
+    const mainContainer = document.querySelector('.app-container');
+    if (mainContainer) mainContainer.style.display = 'none';
+
     document.body.appendChild(pdfDiv);
+    window.scrollTo(0, 0);
 
     const opt = {
         margin:       5,
         filename:     `HourlyQuality_${state.currentMachine}_${data.date}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
+        html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
 
     html2pdf().set(opt).from(pdfDiv).save().then(() => {
         document.body.removeChild(pdfDiv);
+        if (mainContainer) mainContainer.style.display = 'flex';
         state.downloads++;
         updateCounter();
         renderSuccess();
