@@ -25,18 +25,21 @@ function updateCounter() {
 function renderHome() {
     appContent.innerHTML = `
         <div class="view">
-            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--text-secondary);">Select Maintenance Type</h2>
+            <div class="section-title" style="margin-top: 1rem;">
+                <h2>What would you like to do?</h2>
+                <p>Select a maintenance type to begin filling out your form</p>
+            </div>
             <div class="menu-grid">
                 <button class="card-btn" onclick="goToCategory('daily')">
-                    <span style="font-size: 2rem;">📅</span>
+                    <span>🛠️</span>
                     Daily Maintenance
                 </button>
                 <button class="card-btn" onclick="goToCategory('non-daily')">
-                    <span style="font-size: 2rem;">⏳</span>
+                    <span>📊</span>
                     Hourly Quality Check
                 </button>
                 <button class="card-btn" onclick="renderEditPdf()">
-                    <span style="font-size: 2rem;">📝</span>
+                    <span>✏️</span>
                     Edit Recent PDF
                 </button>
             </div>
