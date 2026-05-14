@@ -222,16 +222,17 @@ function goToForm(category, machine) {
                 </div>
 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Signatures</h3>
-                <div class="form-meta">
+                <div class="form-meta" style="background: #fff8f0; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 1.25rem;">
                     <div class="input-group">
-                        <label>Checked by (Image Optional)</label>
-                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                        <label style="color: #b45309; font-weight: 700;">✍️ Checked by Signature <span style="color: #dc2626;">*</span></label>
+                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;" required>
                     </div>
                     <div class="input-group">
-                        <label>Manager (Image Optional)</label>
-                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                        <label style="color: #b45309; font-weight: 700;">🖊️ Manager Signature <span style="color: #dc2626;">*</span></label>
+                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;" required>
                     </div>
                 </div>
+                <p id="sig-error" style="display:none; color:#dc2626; font-size:0.85rem; font-weight:600; margin-top:0.75rem; padding:0.75rem 1rem; background:#fee2e2; border:1.5px solid #fca5a5; border-radius:8px;">⚠️ Both signatures are required before generating the PDF.</p>
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
@@ -382,16 +383,17 @@ function goToHourlyForm(category, machine) {
                 </div>
 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Signatures</h3>
-                <div class="form-meta">
+                <div class="form-meta" style="background: #fff8f0; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 1.25rem;">
                     <div class="input-group">
-                        <label>Checked by (Image Optional)</label>
-                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                        <label style="color: #b45309; font-weight: 700;">✍️ Checked by Signature <span style="color: #dc2626;">*</span></label>
+                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;" required>
                     </div>
                     <div class="input-group">
-                        <label>Manager (Image Optional)</label>
-                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                        <label style="color: #b45309; font-weight: 700;">🖊️ Manager Signature <span style="color: #dc2626;">*</span></label>
+                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;" required>
                     </div>
                 </div>
+                <p id="sig-error" style="display:none; color:#dc2626; font-size:0.85rem; font-weight:600; margin-top:0.75rem; padding:0.75rem 1rem; background:#fee2e2; border:1.5px solid #fca5a5; border-radius:8px;">⚠️ Both signatures are required before generating the PDF.</p>
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
@@ -406,7 +408,22 @@ function handleFormSubmit(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
-    
+
+    // ── Signature validation ──────────────────────────
+    const checkerFile = formData.get('sig_checker');
+    const managerFile = formData.get('sig_manager');
+    const sigError = document.getElementById('sig-error');
+
+    if (!checkerFile || checkerFile.size === 0 || !managerFile || managerFile.size === 0) {
+        if (sigError) {
+            sigError.style.display = 'block';
+            sigError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return; // BLOCK submission
+    }
+    if (sigError) sigError.style.display = 'none';
+    // ─────────────────────────────────────────────────
+
     const filePromises = [];
     ['sig_checker', 'sig_manager'].forEach(key => {
         const file = formData.get(key);
