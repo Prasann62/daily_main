@@ -511,23 +511,29 @@ function generatePDF(data) {
 function generateHourlyPDF(data) {
     const pdfDiv = document.createElement('div');
     pdfDiv.className = 'pdf-container';
-    // Use landscape for hourly because it is very wide
-    pdfDiv.style.width = '297mm';
-    pdfDiv.style.minHeight = '210mm';
+    pdfDiv.style.width = '277mm';
+    pdfDiv.style.minHeight = '190mm';
+    pdfDiv.style.padding = '8mm';
+    pdfDiv.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    pdfDiv.style.background = '#fff';
+    pdfDiv.style.color = '#000';
+
+    const thStyle = `border:1px solid #000;padding:5px 3px;font-size:8px;font-weight:700;text-align:center;background:#e8e8e8;color:#000;`;
+    const tdStyle = `border:1px solid #000;padding:5px 4px;font-size:9px;text-align:center;color:#000;`;
 
     const processingRows = ['NOZZLE', '1', '2', '3'].map((zone, idx) => `
         <tr>
-            <td><strong>${zone}</strong></td>
-            <td>${data['proc_temp_'+idx] || ''}</td>
-            <td>${data['proc_injspeed_'+idx] || ''}</td>
-            <td>${data['proc_injpress_'+idx] || ''}</td>
-            <td>${data['proc_holdspeed_'+idx] || ''}</td>
-            <td>${data['proc_holdpress_'+idx] || ''}</td>
-            <td>${data['proc_injtime_'+idx] || ''}</td>
-            <td>${data['proc_holdtime_'+idx] || ''}</td>
-            <td>${data['proc_cooltime_'+idx] || ''}</td>
-            <td>${data['proc_mouldtemp_'+idx] || ''}</td>
-            <td>${data['proc_screwpos_'+idx] || ''}</td>
+            <td style="${tdStyle}font-weight:700;background:#f5f5f5;">${zone}</td>
+            <td style="${tdStyle}">${data['proc_temp_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_injspeed_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_injpress_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_holdspeed_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_holdpress_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_injtime_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_holdtime_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_cooltime_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_mouldtemp_'+idx] || ''}</td>
+            <td style="${tdStyle}">${data['proc_screwpos_'+idx] || ''}</td>
         </tr>
     `).join('');
 
@@ -537,78 +543,105 @@ function generateHourlyPDF(data) {
         "04.00 - 05.00", "05.00 - 06.00", "06.00 - 07.00", "07.00 - 08.00"
     ];
 
-    const defectRows = timeSlots.map((time, idx) => `
+    const defectDataRows = timeSlots.map((time, idx) => `
         <tr>
-            <td style="white-space: nowrap; font-size: 8px;"><strong>${time}</strong></td>
-            <td>${data['def_setup_'+idx] || ''}</td>
-            <td>${data['def_startup_'+idx] || ''}</td>
-            <td>${data['def_flash_'+idx] || ''}</td>
-            <td>${data['def_weight_'+idx] || ''}</td>
-            <td>${data['def_shot_'+idx] || ''}</td>
-            <td>${data['def_warpage_'+idx] || ''}</td>
-            <td>${data['def_weld_'+idx] || ''}</td>
-            <td>${data['def_flow_'+idx] || ''}</td>
-            <td>${data['def_colour_'+idx] || ''}</td>
-            <td>${data['def_scratches_'+idx] || ''}</td>
-            <td>${data['def_black_'+idx] || ''}</td>
-            <td>${data['def_pin_'+idx] || ''}</td>
-            <td>${data['def_thread_'+idx] || ''}</td>
-            <td>${data['def_fittings_'+idx] || ''}</td>
-            <td>${data['def_total_'+idx] || ''}</td>
-            <td>${data['def_sign1_'+idx] || ''}</td>
-            <td>${data['def_sign2_'+idx] || ''}</td>
-            <td>${data['def_sign3_'+idx] || ''}</td>
+            <td style="${defDataStyle}font-weight:700;white-space:nowrap;background:#fafafa;">${time}</td>
+            <td style="${defDataStyle}">${data['def_setup_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_startup_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_flash_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_weight_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_shot_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_warpage_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_weld_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_flow_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_colour_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_scratches_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_black_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_pin_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_thread_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_fittings_'+idx] || ''}</td>
+            <td style="${defDataStyle}font-weight:700;">${data['def_total_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_sign1_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_sign2_'+idx] || ''}</td>
+            <td style="${defDataStyle}">${data['def_sign3_'+idx] || ''}</td>
         </tr>
-    `).join('') + `
+    `).join('');
+
+    const totalRowStyle = `border:2px solid #000;padding:5px 2px;font-size:8px;text-align:center;font-weight:700;color:#000;background:#e8e8e8;`;
+    const totalRow = `
         <tr>
-            <td style="font-size: 8px;"><strong>TOTAL</strong></td>
-            ${Array(18).fill('').map((_, i) => `<td>${data['def_grandtotal_'+i] || ''}</td>`).join('')}
+            <td style="${totalRowStyle}">TOTAL</td>
+            ${Array(18).fill('').map((_, i) => `<td style="${totalRowStyle}">${data['def_grandtotal_'+i] || ''}</td>`).join('')}
         </tr>
     `;
 
     pdfDiv.innerHTML = `
-        <h2 style="text-transform: uppercase;">${state.currentMachine} - HOURLY QUALITY CHECK</h2>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <p><strong>DATE:</strong> ${data.date}</p>
-            <p><strong>SHIFT:</strong> ${data.shift}</p>
-            <p><strong>PRODUCT:</strong> ${data.product}</p>
-        </div>
-        
-        <h3 style="font-size: 12px; margin-bottom: 5px;">PROCESSING PARAMETER</h3>
-        <table style="font-size: 9px;">
-            <thead>
-                <tr style="background: #f0f0f0;">
-                    <th>ZONE HEAT</th><th>TEMP</th><th>INJ.SPEED</th><th>INJ PRESS</th>
-                    <th>HOLD. SPEED</th><th>HOLD.PRESS</th><th>INJ TIME</th>
-                    <th>HOLD TIME</th><th>COOL TIME</th><th>MOULD TEMP</th><th>SCREW POS</th>
+        <div style="background:#fff;color:#000;">
+            <h2 style="text-align:center;text-transform:uppercase;font-size:13px;font-weight:800;margin:0 0 8px 0;color:#000;">
+                ${state.currentMachine} &ndash; Hourly Quality Check
+            </h2>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #000;">
+                <tr>
+                    <td style="padding:5px 10px;font-size:10px;color:#000;width:34%;border-right:1px solid #000;"><strong>DATE:</strong>&nbsp;${data.date}</td>
+                    <td style="padding:5px 10px;font-size:10px;color:#000;width:33%;border-right:1px solid #000;text-align:center;"><strong>SHIFT:</strong>&nbsp;${data.shift}</td>
+                    <td style="padding:5px 10px;font-size:10px;color:#000;width:33%;text-align:right;"><strong>PRODUCT:</strong>&nbsp;${data.product}</td>
                 </tr>
-            </thead>
-            <tbody>${processingRows}</tbody>
-        </table>
-
-        <h3 style="font-size: 12px; margin-bottom: 5px; margin-top: 15px;">DEFECT DETAILS</h3>
-        <table style="font-size: 8px;">
-            <thead>
-                <tr style="background: #f0f0f0;">
-                    <th>TIME</th><th>SET UP</th><th>START UP</th><th>FLASH</th><th>WEIGHT</th>
-                    <th>SHOT MOULD</th><th>WARPAGE</th><th>WELD LINE</th><th>FLOW MARK</th>
-                    <th>COLOUR</th><th>SCRATCHES</th><th>BLACK DOTS</th><th>PIN MARK</th>
-                    <th>THREAD LINES</th><th>FITTINGS</th><th>TOTAL</th>
-                    <th>SHIFT IN-CHARGE</th><th>QUALITY SIGN</th><th>PRODN HEAD</th>
+            </table>
+            <p style="font-size:9px;font-weight:700;margin:0 0 3px 0;color:#000;text-transform:uppercase;">PROCESSING PARAMETER (Once in Shift)</p>
+            <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:10px;">
+                <colgroup>
+                    <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
+                    <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
+                    <col style="width:9%"><col style="width:10%"><col style="width:9%">
+                </colgroup>
+                <thead><tr>
+                    <th style="${thStyle}">ZONE HEAT</th><th style="${thStyle}">TEMP (°C)</th>
+                    <th style="${thStyle}">INJ.SPEED</th><th style="${thStyle}">INJ PRESS</th>
+                    <th style="${thStyle}">HOLD SPEED</th><th style="${thStyle}">HOLD PRESS</th>
+                    <th style="${thStyle}">INJ TIME</th><th style="${thStyle}">HOLD TIME</th>
+                    <th style="${thStyle}">COOL TIME</th><th style="${thStyle}">MOULD TEMP</th>
+                    <th style="${thStyle}">SCREW POS</th>
+                </tr></thead>
+                <tbody>${processingRows}</tbody>
+            </table>
+            <p style="font-size:9px;font-weight:700;margin:0 0 3px 0;color:#000;text-transform:uppercase;">DEFECT DETAILS (Hourly)</p>
+            <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+                <colgroup>
+                    <col style="width:8%">
+                    <col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%">
+                    <col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%">
+                    <col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%">
+                    <col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%">
+                    <col style="width:5.5%"><col style="width:5.5%"><col style="width:5.5%">
+                </colgroup>
+                <thead><tr>
+                    <th style="${thStyle}">TIME</th>
+                    <th style="${thStyle}">SET UP</th><th style="${thStyle}">START UP</th>
+                    <th style="${thStyle}">FLASH</th><th style="${thStyle}">WEIGHT</th>
+                    <th style="${thStyle}">SHOT</th><th style="${thStyle}">WARPAGE</th>
+                    <th style="${thStyle}">WELD LINE</th><th style="${thStyle}">FLOW MARK</th>
+                    <th style="${thStyle}">COLOUR</th><th style="${thStyle}">SCRATCH</th>
+                    <th style="${thStyle}">BLACK DOTS</th><th style="${thStyle}">PIN MARK</th>
+                    <th style="${thStyle}">THREAD</th><th style="${thStyle}">FITTINGS</th>
+                    <th style="${thStyle}">TOTAL</th>
+                    <th style="${thStyle}">SHIFT IN-CHARGE</th>
+                    <th style="${thStyle}">QUALITY SIGN</th>
+                    <th style="${thStyle}">PRODN HEAD</th>
+                </tr></thead>
+                <tbody>${defectDataRows}${totalRow}</tbody>
+            </table>
+            <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+                <tr>
+                    <td style="width:50%;text-align:center;border:none;padding:0 30px;vertical-align:bottom;">
+                        ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height:35px;display:block;margin:0 auto 5px;">` : `<div style="border-bottom:1px solid #000;height:35px;margin-bottom:5px;"></div>`}
+                        <p style="font-size:10px;color:#000;margin:0;font-weight:700;">Checked by Signature</p>
+                    </td>
+                    <td style="width:50%;text-align:center;border:none;padding:0 30px;vertical-align:bottom;">
+                        ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height:35px;display:block;margin:0 auto 5px;">` : `<div style="border-bottom:1px solid #000;height:35px;margin-bottom:5px;"></div>`}
+                        <p style="font-size:10px;color:#000;margin:0;font-weight:700;">Manager Signature</p>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>${defectRows}</tbody>
-        </table>
-
-        <div class="signatures" style="margin-top: 20px;">
-            <div class="sig-box" style="width: 150px;">
-                ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
-                <p style="font-size: 10px;">Checked by Signature</p>
-            </div>
-            <div class="sig-box" style="width: 150px;">
-                ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
-                <p style="font-size: 10px;">Manager Signature</p>
-            </div>
+            </table>
         </div>
     `;
 
