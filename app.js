@@ -218,6 +218,18 @@ function goToForm(category, machine) {
                     </table>
                 </div>
 
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Signatures</h3>
+                <div class="form-meta">
+                    <div class="input-group">
+                        <label>Checked by (Image Optional)</label>
+                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                    </div>
+                    <div class="input-group">
+                        <label>Manager (Image Optional)</label>
+                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
                 </div>
@@ -366,6 +378,18 @@ function goToHourlyForm(category, machine) {
                     </table>
                 </div>
 
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Signatures</h3>
+                <div class="form-meta">
+                    <div class="input-group">
+                        <label>Checked by (Image Optional)</label>
+                        <input type="file" name="sig_checker" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                    </div>
+                    <div class="input-group">
+                        <label>Manager (Image Optional)</label>
+                        <input type="file" name="sig_manager" accept="image/*" class="table-input" style="padding: 0.5rem;">
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
                 </div>
@@ -380,21 +404,44 @@ function handleFormSubmit(e) {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     
-    // Save to state for editing later
-    state.formData = {
-        machine: state.currentMachine,
-        category: state.currentCategory,
-        flow: state.currentFlow,
-        data: data
-    };
-    
-    localStorage.setItem('lastSubmission', JSON.stringify(state.formData));
-    
-    if (state.currentFlow === 'non-daily') {
-        generateHourlyPDF(data);
-    } else {
-        generatePDF(data);
-    }
+    const filePromises = [];
+    ['sig_checker', 'sig_manager'].forEach(key => {
+        const file = formData.get(key);
+        if (file && file.size > 0) {
+            const promise = new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    data[key + '_base64'] = event.target.result;
+                    resolve();
+                };
+                reader.readAsDataURL(file);
+            });
+            filePromises.push(promise);
+        }
+    });
+
+    Promise.all(filePromises).then(() => {
+        const storageData = { ...data };
+        delete storageData.sig_checker_base64;
+        delete storageData.sig_manager_base64;
+        delete storageData.sig_checker;
+        delete storageData.sig_manager;
+
+        state.formData = {
+            machine: state.currentMachine,
+            category: state.currentCategory,
+            flow: state.currentFlow,
+            data: storageData
+        };
+        
+        localStorage.setItem('lastSubmission', JSON.stringify(state.formData));
+        
+        if (state.currentFlow === 'non-daily') {
+            generateHourlyPDF(data);
+        } else {
+            generatePDF(data);
+        }
+    });
 }
 
 function generatePDF(data) {
@@ -438,11 +485,11 @@ function generatePDF(data) {
 
         <div class="signatures">
             <div class="sig-box">
-                <div class="sig-line"></div>
+                ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
                 <p>Checked by Signature</p>
             </div>
             <div class="sig-box">
-                <div class="sig-line"></div>
+                ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
                 <p>Manager Signature</p>
             </div>
         </div>
@@ -557,6 +604,17 @@ function generateHourlyPDF(data) {
             </thead>
             <tbody>${defectRows}</tbody>
         </table>
+
+        <div class="signatures" style="margin-top: 20px;">
+            <div class="sig-box" style="width: 150px;">
+                ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
+                <p style="font-size: 10px;">Checked by Signature</p>
+            </div>
+            <div class="sig-box" style="width: 150px;">
+                ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div class="sig-line"></div>'}
+                <p style="font-size: 10px;">Manager Signature</p>
+            </div>
+        </div>
     `;
 
     document.body.appendChild(pdfDiv);
