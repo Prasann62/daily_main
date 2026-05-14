@@ -445,88 +445,65 @@ function handleFormSubmit(e) {
 }
 
 function generatePDF(data) {
-    // Create a temporary hidden div for the PDF content
     const pdfDiv = document.createElement('div');
-    pdfDiv.className = 'pdf-container pdf-daily';
+    pdfDiv.className = 'pdf-container';
+    pdfDiv.style.width = '210mm';
+    pdfDiv.style.padding = '10mm';
+    pdfDiv.style.fontFamily = 'Arial, sans-serif';
+    pdfDiv.style.color = '#000';
+
     const parameters = getParametersForCurrentCategory();
-    
     const paramRows = parameters.map((param, index) => `
         <tr>
-            <td style="text-align: center; border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${index + 1}</td>
-            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px; word-wrap: break-word;">${param}</td>
-            <td style="text-align: center; border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['status_'+index] || ''}</td>
-            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['action_'+index] || ''}</td>
-            <td style="border: 1px solid #000; padding: 7px 4px; font-size: 11px;">${data['remarks_'+index] || ''}</td>
+            <td style="border: 1px solid #000; padding: 5px; text-align: center;">${index + 1}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${param}</td>
+            <td style="border: 1px solid #000; padding: 5px; text-align: center;">${data['status_'+index] || ''}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${data['action_'+index] || ''}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${data['remarks_'+index] || ''}</td>
         </tr>
     `).join('');
 
     pdfDiv.innerHTML = `
-        <div style="font-family: Arial, sans-serif; color: #000; background: #fff; padding: 15px; width: 100%;">
-            <h2 style="text-align: center; text-transform: uppercase; font-size: 16px; margin-bottom: 15px; color: #000;">${state.currentMachine} - ${state.currentCategory} DAILY MAINTENANCE</h2>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
-                <tr>
-                    <td style="border: none; padding: 3px 0; font-size: 13px; width: 50%;"><strong>DATE:</strong> ${data.date}</td>
-                    <td style="border: none; padding: 3px 0; font-size: 13px; width: 50%; text-align: right;"><strong>SHIFT:</strong> ${data.shift}</td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="border: none; padding: 3px 0; font-size: 13px;"><strong>PRODUCT:</strong> ${data.product}</td>
-                </tr>
-            </table>
-            
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                <colgroup>
-                    <col style="width: 6%">
-                    <col style="width: 44%">
-                    <col style="width: 10%">
-                    <col style="width: 20%">
-                    <col style="width: 20%">
-                </colgroup>
+        <div style="border: 2px solid #000; padding: 10px;">
+            <h1 style="text-align: center; text-transform: uppercase; margin: 0 0 10px 0; font-size: 18px;">${state.currentMachine} - ${state.currentCategory} MAINTENANCE REPORT</h1>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
+                <span><strong>DATE:</strong> ${data.date}</span>
+                <span><strong>SHIFT:</strong> ${data.shift}</span>
+                <span><strong>PRODUCT:</strong> ${data.product}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                 <thead>
-                    <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">SL.NO</th>
-                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: left;">PARAMETERS</th>
-                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">STATUS</th>
-                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">TAKEN ACTION</th>
-                        <th style="border: 1px solid #000; padding: 8px 4px; font-size: 11px; text-align: center;">REMARKS</th>
+                    <tr style="background: #eee;">
+                        <th style="border: 1px solid #000; padding: 5px;">SL</th>
+                        <th style="border: 1px solid #000; padding: 5px;">PARAMETERS</th>
+                        <th style="border: 1px solid #000; padding: 5px;">STATUS</th>
+                        <th style="border: 1px solid #000; padding: 5px;">ACTION</th>
+                        <th style="border: 1px solid #000; padding: 5px;">REMARKS</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${paramRows}
-                </tbody>
+                <tbody>${paramRows}</tbody>
             </table>
-
-            <div style="display: flex; justify-content: space-between; margin-top: 40px;">
-                <div style="width: 200px; text-align: center;">
-                    ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div style="border-bottom: 1px solid #000; height: 35px; margin-bottom: 5px;"></div>'}
-                    <p style="font-size: 12px; margin: 0;">Checked by Signature</p>
+            <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+                <div style="text-align: center;">
+                    ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="height: 40px; display: block;">` : '<div style="height: 40px;"></div>'}
+                    <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 10px;">Checked By</div>
                 </div>
-                <div style="width: 200px; text-align: center;">
-                    ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 40px; display: block; margin: 0 auto 5px;">` : '<div style="border-bottom: 1px solid #000; height: 35px; margin-bottom: 5px;"></div>'}
-                    <p style="font-size: 12px; margin: 0;">Manager Signature</p>
+                <div style="text-align: center;">
+                    ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="height: 40px; display: block;">` : '<div style="height: 40px;"></div>'}
+                    <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 10px;">Manager</div>
                 </div>
             </div>
         </div>
     `;
 
-    const mainContainer = document.querySelector('.app-container');
-    if (mainContainer) mainContainer.style.display = 'none';
-    
     document.body.appendChild(pdfDiv);
-    window.scrollTo(0, 0);
-
-    const opt = {
-        margin:       10,
-        filename:     `Maintenance_${state.currentMachine}_${data.date}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(pdfDiv).save().then(() => {
+    html2pdf().set({
+        filename: `Maintenance_${state.currentMachine}_${data.date}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(pdfDiv).save().then(() => {
         document.body.removeChild(pdfDiv);
-        if (mainContainer) mainContainer.style.display = 'flex';
-        state.downloads++;
-        updateCounter();
         renderSuccess();
     });
 }
