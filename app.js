@@ -234,8 +234,14 @@ function goToForm(category, machine) {
                 </div>
                 <p id="sig-error" style="display:none; color:#dc2626; font-size:0.85rem; font-weight:600; margin-top:0.75rem; padding:0.75rem 1rem; background:#fee2e2; border:1.5px solid #fca5a5; border-radius:8px;">⚠️ Both signatures are required before generating the PDF.</p>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:0.75rem;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+                    <button type="button" class="btn btn-secondary" onclick="renderHome()">Cancel</button>
+                    <button type="button" id="save-session-btn" class="btn" style="background:#f59e0b;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,0.3);" onclick="saveHourlyToSession()">
+                        💾 Save Progress
+                    </button>
+                    <button type="button" class="btn" style="background:#16a34a;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(22,163,74,0.3);" onclick="generateFromSession()">
+                        📄 Generate Shift PDF
+                    </button>
                 </div>
             </form>
         </div>
@@ -308,21 +314,24 @@ function goToHourlyForm(category, machine) {
             </div>
             
             <form id="hourly-form" onsubmit="handleFormSubmit(event)">
-                <div class="form-meta">
-                    <div class="input-group">
-                        <label>Date</label>
-                        <input type="date" name="date" required>
+                <div class="form-meta" style="background:#eff6ff; border:1.5px solid #2563eb; border-radius:10px; padding:1.25rem;">
+                    <div style="grid-column:1/-1; font-size:0.78rem; color:#1d4ed8; font-weight:700; margin-bottom:0.5rem;">
+                        💡 Date, Shift & Product are auto-saved — fill once, reused for all machine forms!
                     </div>
                     <div class="input-group">
-                        <label>Shift</label>
-                        <select name="shift" required>
+                        <label>தேதி (Date)</label>
+                        <input type="date" name="date" id="hourly-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label>ஷிப்ட் (Shift)</label>
+                        <select name="shift" id="hourly-shift" required>
                             <option value="Day">Day</option>
                             <option value="Night">Night</option>
                         </select>
                     </div>
                     <div class="input-group">
-                        <label>Name of the Product</label>
-                        <input type="text" name="product" required>
+                        <label>தயாரிப்பு (Product)</label>
+                        <input type="text" name="product" id="hourly-product" required>
                     </div>
                 </div>
 
@@ -395,19 +404,115 @@ function goToHourlyForm(category, machine) {
                 </div>
                 <p id="sig-error" style="display:none; color:#dc2626; font-size:0.85rem; font-weight:600; margin-top:0.75rem; padding:0.75rem 1rem; background:#fee2e2; border:1.5px solid #fca5a5; border-radius:8px;">⚠️ Both signatures are required before generating the PDF.</p>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Submit & Generate PDF</button>
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:0.75rem;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+                    <button type="button" class="btn btn-secondary" onclick="renderHome()">Cancel</button>
+                    <button type="button" id="save-session-btn" class="btn" style="background:#f59e0b;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,0.3);" onclick="saveHourlyToSession()">
+                        💾 Save Progress
+                    </button>
+                    <button type="button" class="btn" style="background:#16a34a;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(22,163,74,0.3);" onclick="generateFromSession()">
+                        📄 Generate Shift PDF
+                    </button>
                 </div>
             </form>
         </div>
     `;
+    // Load session data into form
+    const _sk = `hourlySession_${machine}`;
+    const _sd = JSON.parse(sessionStorage.getItem(_sk) || '{}');
+    const _today = new Date().toISOString().split('T')[0];
+    const _shared = JSON.parse(localStorage.getItem('hourlySharedInfo') || '{}');
+    const _dEl = document.getElementById('hourly-date');
+    const _sEl = document.getElementById('hourly-shift');
+    const _pEl = document.getElementById('hourly-product');
+    if (_dEl) _dEl.value = _sd.date    || _shared.date    || _today;
+    if (_sEl) _sEl.value = _sd.shift   || _shared.shift   || 'Day';
+    if (_pEl) _pEl.value = _sd.product || _shared.product || '';
+    Object.entries(_sd).forEach(([name, val]) => {
+        if (['date','shift','product'].includes(name)) return;
+        const el = document.querySelector(`#hourly-form [name="${name}"]`);
+        if (el) el.value = val;
+    });
+    if (Object.keys(_sd).length > 3) {
+        const _b = document.createElement('div');
+        _b.setAttribute('style','position:fixed;bottom:20px;right:20px;background:#16a34a;color:#fff;padding:10px 18px;border-radius:10px;font-size:0.85rem;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.2);z-index:9999;');
+        _b.textContent = '✅ Session data restored!';
+        document.body.appendChild(_b);
+        setTimeout(() => _b.remove(), 3000);
+    }
 }
+
+// ---- Session Helper Functions ----------------------------------------
+function getHourlySessionKey() {
+    return 'hourlySession_' + state.currentMachine;
+}
+
+function saveHourlyToSession() {
+    const form = document.getElementById('hourly-form');
+    if (!form) return;
+    const data = {};
+    form.querySelectorAll('input[name]:not([type="file"]), select[name]').forEach(el => {
+        data[el.name] = el.value;
+    });
+    sessionStorage.setItem(getHourlySessionKey(), JSON.stringify(data));
+    if (data.date || data.product) {
+        localStorage.setItem('hourlySharedInfo', JSON.stringify({ date: data.date || '', shift: data.shift || 'Day', product: data.product || '' }));
+    }
+    const btn = document.getElementById('save-session-btn');
+    if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅ Saved!';
+        btn.style.background = '#16a34a';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = '#f59e0b'; }, 2000);
+    }
+}
+
+function generateFromSession() {
+    saveHourlyToSession();
+    const sessionData = JSON.parse(sessionStorage.getItem(getHourlySessionKey()) || '{}');
+    if (!sessionData.date) {
+        alert('Please fill in Date, Shift and Product first and click Save.');
+        return;
+    }
+    const checkerInput = document.querySelector('[name="sig_checker"]');
+    const managerInput = document.querySelector('[name="sig_manager"]');
+    const sigError = document.getElementById('sig-error');
+    if (!checkerInput || checkerInput.files.length === 0 || !managerInput || managerInput.files.length === 0) {
+        if (sigError) {
+            sigError.textContent = '⚠️ Please upload both signatures before generating the Shift PDF.';
+            sigError.style.display = 'block';
+            sigError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+    const readFile = (file) => new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(file);
+    });
+    Promise.all([ readFile(checkerInput.files[0]), readFile(managerInput.files[0]) ])
+    .then(([checkerB64, managerB64]) => {
+        const finalData = { ...sessionData, sig_checker_base64: checkerB64, sig_manager_base64: managerB64 };
+        sessionStorage.removeItem(getHourlySessionKey());
+        generateHourlyPDF(finalData);
+    });
+}
+// ----------------------------------------------------------------------
 
 
 function handleFormSubmit(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
+
+    // ── Save shared info so next machine form is pre-filled ──────
+    if (data.date || data.product) {
+        localStorage.setItem('hourlySharedInfo', JSON.stringify({
+            date: data.date || '',
+            shift: data.shift || 'Day',
+            product: data.product || ''
+        }));
+    }
+    // ─────────────────────────────────────────────────────────────
 
     // ── Signature validation ──────────────────────────
     const checkerFile = formData.get('sig_checker');
@@ -693,13 +798,32 @@ function generateHourlyPDF(data) {
 }
 
 function renderSuccess() {
+    // Show next-machine quick buttons only in hourly flow
+    const isHourly = state.currentFlow === 'non-daily';
+    const machines = [
+        { cat: 'Injection', name: 'Yizumi' },
+        { cat: 'Injection', name: 'Arburg' },
+        { cat: 'ISBM',      name: 'ISBM Machine' }
+    ];
+    const nextButtons = isHourly ? `
+        <div style="margin-top:2rem; padding:1.25rem; background:#eff6ff; border:1.5px solid #2563eb; border-radius:12px;">
+            <p style="font-size:0.85rem; font-weight:700; color:#1d4ed8; margin-bottom:0.75rem;">
+                ⚡ Fill next machine form (Date &amp; Shift already saved!):
+            </p>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:0.6rem;">
+                ${machines.filter(m => m.name !== state.currentMachine).map(m =>
+                    `<button class="btn btn-secondary" style="border-color:#2563eb;color:#2563eb;" onclick="handleMachineSelect('${m.cat}','${m.name}')">📋 ${m.name}</button>`
+                ).join('')}
+            </div>
+        </div>` : '';
+
     appContent.innerHTML = `
-        <div class="view glass-panel" style="text-align: center; padding: 4rem 2rem;">
+        <div class="view glass-panel" style="text-align: center; padding: 3rem 2rem;">
             <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
-            <h2 style="color: var(--success); margin-bottom: 1rem;">PDF Downloaded Successfully!</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">The form has been converted and saved to your device.</p>
-            
-            <div style="display: flex; justify-content: center; gap: 1rem;">
+            <h2 style="color: var(--success); margin-bottom: 0.5rem;">PDF Downloaded Successfully!</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">The form has been saved to your device.</p>
+            ${nextButtons}
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-top:1.5rem;">
                 <button class="btn btn-secondary" onclick="shareData()">Share Form</button>
                 <button class="btn btn-primary" onclick="renderHome()">Back to Menu</button>
             </div>
