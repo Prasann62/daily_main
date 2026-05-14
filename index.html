@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Portal</title>
+    <meta name="description" content="Machine Maintenance PDF Form Generator">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <h1 class="logo">MAINTENANCE<span>PORTAL</span></h1>
+            <div class="stats">
+                <span class="stat-label">Total PDFs Downloaded:</span>
+                <span class="stat-value" id="download-count">0</span>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="app-content">
+            <!-- Views will be injected here by app.js -->
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
