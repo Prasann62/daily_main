@@ -447,7 +447,7 @@ function handleFormSubmit(e) {
 function generatePDF(data) {
     // Create a temporary hidden div for the PDF content
     const pdfDiv = document.createElement('div');
-    pdfDiv.className = 'pdf-container';
+    pdfDiv.className = 'pdf-container pdf-daily';
     const parameters = getParametersForCurrentCategory();
     
     const paramRows = parameters.map((param, index) => `
