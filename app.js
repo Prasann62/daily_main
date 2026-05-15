@@ -236,11 +236,8 @@ function goToForm(category, machine) {
 
                 <div style="display:flex;justify-content:flex-end;align-items:center;gap:0.75rem;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);">
                     <button type="button" class="btn btn-secondary" onclick="renderHome()">Cancel</button>
-                    <button type="button" id="save-session-btn" class="btn" style="background:#f59e0b;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,0.3);" onclick="saveHourlyToSession()">
-                        💾 Save Progress
-                    </button>
-                    <button type="button" class="btn" style="background:#16a34a;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(22,163,74,0.3);" onclick="generateFromSession()">
-                        📄 Generate Shift PDF
+                    <button type="submit" class="btn" style="background:#16a34a;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(22,163,74,0.3);">
+                        📄 Generate PDF
                     </button>
                 </div>
             </form>
@@ -621,11 +618,15 @@ function generatePDF(data) {
         </div>
     `;
 
+    const mainContainer = document.querySelector('.app-container');
+    if (mainContainer) mainContainer.style.display = 'none';
+
     document.body.appendChild(pdfDiv);
+    window.scrollTo(0, 0);
     html2pdf().set({
         filename: `Maintenance_${state.currentMachine}_${data.date}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(pdfDiv).save().then(() => {
         document.body.removeChild(pdfDiv);
@@ -820,8 +821,8 @@ function renderSuccess() {
     appContent.innerHTML = `
         <div class="view glass-panel" style="text-align: center; padding: 3rem 2rem;">
             <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
-            <h2 style="color: var(--success); margin-bottom: 0.5rem;">PDF Downloaded Successfully!</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">The form has been saved to your device.</p>
+            <h2 style="color: var(--green); margin-bottom: 0.5rem;">PDF Downloaded Successfully!</h2>
+            <p style="color: var(--text-2); margin-bottom: 1.5rem;">The form has been saved to your device.</p>
             ${nextButtons}
             <div style="display: flex; justify-content: center; gap: 1rem; margin-top:1.5rem;">
                 <button class="btn btn-secondary" onclick="shareData()">Share Form</button>
