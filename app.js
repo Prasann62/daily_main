@@ -13,6 +13,7 @@ let state = {
 // Initialize
 function init() {
     updateCounter();
+    initDarkMode();
     renderHome();
 }
 
@@ -59,6 +60,7 @@ function goToCategory(flow) {
                 <button class="card-btn" onclick="goToMachine('Injection')">Injection</button>
                 <button class="card-btn" onclick="goToMachine('PRT')">PRT</button>
                 <button class="card-btn" onclick="handleMachineSelect('ISBM', 'ISBM Machine')">ISBM</button>
+                <button class="card-btn" onclick="goToMachine('Compressor')"><span>🏭</span>Compressor</button>
             </div>
         </div>
     `;
@@ -70,6 +72,7 @@ function goToMachine(category) {
     let machines = [];
     if (category === 'Injection') machines = ['Yizumi', 'Arburg'];
     else if (category === 'PRT') machines = ['Sai Samarth', 'Bahubali'];
+    else if (category === 'Compressor') machines = ['High Pressure Compressor', 'Low Pressure Compressor'];
 
     appContent.innerHTML = `
         <div class="view">
@@ -148,6 +151,25 @@ const formParameters = {
         "All-over Machine Clean (மிஷின் முழுவதையும் கத்தம் செய்தல்)",
         "Oil Level Check (ஆயில் வெல் செக்)",
         "Oven Temp Check - 163 (ஓவன் வெப்பதிலை செக் - 163)"
+    ],
+    'Compressor': [
+        "Oil / Lube Level in Running Condition (இயங்கும் நிலையில் ஆயில் அளவு சரிபார்ப்பு)",
+        "Drain Reciprocator Tank Condensate (கம்ப்ரஸர் டேங்கில் உள்ள தண்ணீரை வெளியேற்றுதல்)",
+        "Check Unusual Noise & Vibration (வழக்கத்திற்கு மாறான சத்தம் மற்றும் அதிர்வு உள்ளதா?)",
+        "Check Input Power Supply Voltage / Phase / Current (மின்சார வோல்டேஜ், பேஸ் மற்றும் கரண்ட் சரிபார்த்தல்)",
+        "Check For Oil Leakage (ஆயில் கசிவு ஏதேனும் உள்ளதா என சரிபார்த்தல்)",
+        "Electrical Connection Stability (மின் இணைப்புகள் சரியாக உள்ளதா என சரிபார்த்தல்)",
+        "Tightness of Fasteners & Bolts (போல்ட்டுகள் மற்றும் நட்டுகள் சரியாக இறுக்கமாக உள்ளதா?)",
+        "Inspect Drive Belt, Adjust If Necessary (டைரவ் பெல்ட்டின் நிலை மற்றும் மேம்போக்கு சரிபார்த்தல்)",
+        "OVER ALL - MACHINE CLEAN (மெஷின் ஒட்டுமொத்தமாக சுத்தமாக உள்ளதா?)"
+    ],
+    'Chiller': [
+        "Chiller Water Level Check (சில்லர் தண்ணீர் மட்டம் சரிபார்ப்பு)",
+        "Chiller Set Temperature Check (சில்லர் வெப்பநிலை அமைப்பு சரிபார்ப்பு)",
+        "Coolant Flow Rate Check (குளிர்பான ஓட்டம் சரிபார்ப்பு)",
+        "Refrigerant Pressure Check (குளிர்பான அழுத்தம் சரிபார்ப்பு)",
+        "Condenser / Filter Clean (கண்டென்சர் / வடிகட்டி சுத்தம்)",
+        "Chiller Pump Operation Check (சில்லர் பம்ப் இயக்கம் சரிபார்ப்பு)"
     ]
 };
 
@@ -174,6 +196,41 @@ function goToForm(category, machine) {
             <td><input type="text" class="table-input" name="remarks_${index}"></td>
         </tr>
     `).join('');
+
+    // Chiller section — only for High Pressure Compressor
+    const isHighPressure = machine === 'High Pressure Compressor';
+    const chillerParams = formParameters['Chiller'] || [];
+    const chillerRows = chillerParams.map((param, idx) => `
+        <tr>
+            <td>${idx + 1}</td>
+            <td>${param}</td>
+            <td>
+                <div class="status-radios">
+                    <label><input type="radio" name="chiller_status_${idx}" value="OK" required> OK</label>
+                    <label><input type="radio" name="chiller_status_${idx}" value="NOT OK"> NOT OK</label>
+                </div>
+            </td>
+            <td><input type="text" class="table-input" name="chiller_action_${idx}"></td>
+            <td><input type="text" class="table-input" name="chiller_remarks_${idx}"></td>
+        </tr>
+    `).join('');
+    const chillerSection = isHighPressure ? `
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">🧊 Chiller Check</h3>
+        <div style="overflow-x: auto;">
+            <table class="maintenance-table">
+                <thead>
+                    <tr>
+                        <th>SL.NO</th>
+                        <th>CHILLER PARAMETERS / சில்லர் அளவுகோல்</th>
+                        <th style="width: 150px;">STATUS</th>
+                        <th>TAKEN ACTION</th>
+                        <th>REMARKS</th>
+                    </tr>
+                </thead>
+                <tbody>${chillerRows}</tbody>
+            </table>
+        </div>
+    ` : '';
 
     appContent.innerHTML = `
         <div class="view glass-panel">
@@ -202,8 +259,17 @@ function goToForm(category, machine) {
                         <label>Name of the Product</label>
                         <input type="text" name="product" required>
                     </div>
+                    <div class="input-group">
+                        <label>Operator Name</label>
+                        <input type="text" name="operator" placeholder="Enter operator name" required>
+                    </div>
                 </div>
 
+                <div style="display:flex; justify-content:flex-end; margin-bottom:0.75rem;">
+                    <button type="button" class="btn" style="background:#2563eb;color:#fff;font-size:0.8rem;padding:0.5rem 1.1rem;" onclick="quickOkAll(event)">
+                        ✅ Mark All OK
+                    </button>
+                </div>
                 <div style="overflow-x: auto;">
                     <table class="maintenance-table">
                         <thead>
@@ -220,6 +286,8 @@ function goToForm(category, machine) {
                         </tbody>
                     </table>
                 </div>
+
+                ${chillerSection}
 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Signatures</h3>
                 <div class="form-meta" style="background: #fff8f0; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 1.25rem;">
@@ -243,6 +311,11 @@ function goToForm(category, machine) {
             </form>
         </div>
     `;
+    // Auto-fill date & detect shift by current time
+    const _df = document.querySelector('#maintenance-form [name="date"]');
+    if (_df && !_df.value) _df.value = new Date().toISOString().split('T')[0];
+    const _sf = document.querySelector('#maintenance-form [name="shift"]');
+    if (_sf) { const h = new Date().getHours(); _sf.value = (h >= 8 && h < 20) ? 'Day' : 'Night'; }
 }
 
 function goToHourlyForm(category, machine) {
@@ -595,7 +668,7 @@ function generatePDF(data) {
             </div>
             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                 <thead>
-                    <tr style="background: #eee;">
+                    <tr style="background: #e8edf5;">
                         <th style="border: 1px solid #000; padding: 5px;">SL</th>
                         <th style="border: 1px solid #000; padding: 5px;">PARAMETERS</th>
                         <th style="border: 1px solid #000; padding: 5px;">STATUS</th>
@@ -605,6 +678,29 @@ function generatePDF(data) {
                 </thead>
                 <tbody>${paramRows}</tbody>
             </table>
+            ${state.currentMachine === 'High Pressure Compressor' ? `
+            <p style="font-weight:700; font-size:11px; margin: 15px 0 5px; text-transform:uppercase;">🧊 Chiller Check</p>
+            <table style="width:100%; border-collapse:collapse; font-size:10px;">
+                <thead>
+                    <tr style="background:#e0f2fe;">
+                        <th style="border:1px solid #000;padding:5px;">SL</th>
+                        <th style="border:1px solid #000;padding:5px;">CHILLER PARAMETERS</th>
+                        <th style="border:1px solid #000;padding:5px;">STATUS</th>
+                        <th style="border:1px solid #000;padding:5px;">ACTION</th>
+                        <th style="border:1px solid #000;padding:5px;">REMARKS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(formParameters['Chiller'] || []).map((param, idx) => `
+                    <tr>
+                        <td style="border:1px solid #000;padding:5px;text-align:center;">${idx+1}</td>
+                        <td style="border:1px solid #000;padding:5px;">${param}</td>
+                        <td style="border:1px solid #000;padding:5px;text-align:center;">${data['chiller_status_'+idx] || ''}</td>
+                        <td style="border:1px solid #000;padding:5px;">${data['chiller_action_'+idx] || ''}</td>
+                        <td style="border:1px solid #000;padding:5px;">${data['chiller_remarks_'+idx] || ''}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>` : ''}
             <div style="margin-top: 30px; display: flex; justify-content: space-between;">
                 <div style="text-align: center;">
                     ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="height: 40px; display: block;">` : '<div style="height: 40px;"></div>'}
@@ -824,8 +920,9 @@ function renderSuccess() {
             <h2 style="color: var(--green); margin-bottom: 0.5rem;">PDF Downloaded Successfully!</h2>
             <p style="color: var(--text-2); margin-bottom: 1.5rem;">The form has been saved to your device.</p>
             ${nextButtons}
-            <div style="display: flex; justify-content: center; gap: 1rem; margin-top:1.5rem;">
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-top:1.5rem; flex-wrap:wrap;">
                 <button class="btn btn-secondary" onclick="shareData()">Share Form</button>
+                <a href="https://wa.me/?text=${encodeURIComponent('Maintenance PDF for ' + state.currentMachine + ' submitted on ' + new Date().toLocaleDateString('en-IN') + '. Check your downloads.')}" target="_blank" class="btn" style="background:#25d366;color:#fff;font-weight:700;text-decoration:none;">💬 WhatsApp</a>
                 <button class="btn btn-primary" onclick="renderHome()">Back to Menu</button>
             </div>
         </div>
@@ -882,6 +979,33 @@ function renderEditPdf() {
             }
         }
     }, 100);
+}
+
+// ─── DARK MODE ────────────────────────────────────
+function initDarkMode() {
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        const btn = document.getElementById('dark-toggle');
+        if (btn) btn.textContent = '☀️ Light';
+    }
+}
+function toggleDarkMode() {
+    document.body.classList.toggle('dark');
+    const isDark = document.body.classList.contains('dark');
+    localStorage.setItem('darkMode', isDark);
+    const btn = document.getElementById('dark-toggle');
+    if (btn) btn.textContent = isDark ? '☀️ Light' : '🌙 Dark';
+}
+
+// ─── QUICK OK ALL ─────────────────────────────────
+function quickOkAll() {
+    document.querySelectorAll('.maintenance-table input[type="radio"][value="OK"]').forEach(r => r.checked = true);
+    // Visual feedback
+    const btn = event.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = '✅ All Marked OK!';
+    btn.style.background = '#16a34a';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = '#2563eb'; }, 1500);
 }
 
 // Start

@@ -391,18 +391,18 @@ h3::after {
 }
 
 .maintenance-table thead {
-    background: linear-gradient(135deg, #0f172a, #1e40af);
+    background: #e8edf5;
 }
 
 .maintenance-table th {
-    color: rgba(255,255,255,0.85);
-    font-weight: 600;
+    color: #1e293b;
+    font-weight: 700;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.7px;
     padding: 0.9rem 0.75rem;
     text-align: left;
-    border-bottom: none;
+    border-bottom: 2px solid #cbd5e1;
     white-space: nowrap;
 }
 
@@ -649,3 +649,67 @@ h3::after {
 /* ─── MISC ───────────────────────────────────────── */
 
 .hidden { display: none !important; }
+
+/* ─── NOT OK ROW HIGHLIGHT ────────────────────────── */
+.maintenance-table tbody tr:has(input[value="NOT OK"]:checked) td {
+    background: #fee2e2 !important;
+    color: #991b1b;
+}
+
+/* ─── DARK MODE ────────────────────────────────── */
+body.dark {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #1a2540;
+    --border: #2d3f5e;
+    --border-strong: #3d5275;
+    --text-1: #f1f5f9;
+    --text-2: #94a3b8;
+    --text-3: #64748b;
+    background-image:
+        radial-gradient(ellipse at 0% 0%, rgba(37,99,235,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 100% 100%, rgba(16,163,74,0.08) 0%, transparent 60%);
+}
+
+body.dark input[type="text"],
+body.dark input[type="date"],
+body.dark select,
+body.dark .table-input {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #2d3f5e;
+}
+
+body.dark .maintenance-table tbody tr:nth-child(even) td {
+    background: #1a2540;
+}
+body.dark .maintenance-table tbody tr:hover td {
+    background: #1e3a5f;
+}
+body.dark .maintenance-table tbody tr:has(input[value="NOT OK"]:checked) td {
+    background: #450a0a !important;
+    color: #fca5a5;
+}
+body.dark .status-radios label {
+    background: #1e293b;
+    border-color: #2d3f5e;
+    color: #94a3b8;
+}
+body.dark .card-btn {
+    background: #1e293b;
+    border-color: #2d3f5e;
+    color: #f1f5f9;
+}
+body.dark .card-btn:hover {
+    background: #1e3a5f;
+}
+body.dark .btn-secondary {
+    background: #1e293b;
+    border-color: #2d3f5e;
+    color: #94a3b8;
+}
+body.dark .btn-secondary:hover {
+    background: #1e3a5f;
+    color: #60a5fa;
+    border-color: #3b82f6;
+}
