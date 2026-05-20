@@ -7,14 +7,70 @@ let state = {
     currentFlow: null, // 'daily' or 'non-daily'
     currentCategory: null, // 'Injection', 'PRT', 'ISBM'
     currentMachine: null,
-    formData: null
+    formData: null,
+    currentUser: localStorage.getItem('currentUser') || null
 };
 
 // Initialize
 function init() {
     updateCounter();
     initDarkMode();
-    renderHome();
+    if (state.currentUser) {
+        updateHeaderAuth();
+        renderHome();
+    } else {
+        renderLogin();
+    }
+}
+
+function updateHeaderAuth() {
+    const headerAuth = document.getElementById('header-auth');
+    if (headerAuth) {
+        headerAuth.innerHTML = `
+            <span style="font-size:0.75rem;font-weight:700;margin-right:0.5rem;color:var(--text);">👤 ${state.currentUser}</span>
+            <button onclick="logout()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:999px;padding:0.4rem 0.9rem;cursor:pointer;font-size:0.78rem;font-weight:600;">Logout</button>
+        `;
+    }
+}
+
+function logout() {
+    state.currentUser = null;
+    localStorage.removeItem('currentUser');
+    const headerAuth = document.getElementById('header-auth');
+    if (headerAuth) headerAuth.innerHTML = '';
+    renderLogin();
+}
+
+function renderLogin() {
+    appContent.innerHTML = `
+        <div class="view glass-panel" style="max-width: 400px; margin: 4rem auto; text-align: center; padding: 3rem 2rem;">
+            <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔒</div>
+            <h2 style="margin-bottom: 1.5rem; color: var(--text);">Portal Login</h2>
+            <div class="input-group" style="text-align: left;">
+                <label style="font-weight:700; color:var(--text-2);">Password</label>
+                <input type="password" id="login-pwd" class="table-input" style="padding: 1rem; font-size: 1.25rem; text-align: center; letter-spacing: 0.2rem; border-radius:10px;" placeholder="Enter password" onkeypress="if(event.key === 'Enter') handleLogin()">
+            </div>
+            <p id="login-error" style="display:none; color: #dc2626; font-size: 0.85rem; font-weight: 700; margin-top: 0.75rem; background:#fee2e2; padding:0.5rem; border-radius:6px;">⚠️ Incorrect password.</p>
+            <button class="btn" style="width: 100%; margin-top: 2rem; background: #2563eb; color: #fff; font-size: 1.1rem; padding: 0.8rem; border-radius:10px;" onclick="handleLogin()">Login</button>
+        </div>
+    `;
+}
+
+function handleLogin() {
+    const pwd = document.getElementById('login-pwd').value;
+    if (pwd === '200105') {
+        state.currentUser = 'Operator';
+        localStorage.setItem('currentUser', 'Operator');
+        updateHeaderAuth();
+        renderHome();
+    } else if (pwd === '1617') {
+        state.currentUser = 'Manager';
+        localStorage.setItem('currentUser', 'Manager');
+        updateHeaderAuth();
+        renderHome();
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+    }
 }
 
 function updateCounter() {
@@ -44,8 +100,60 @@ function renderHome() {
                     Edit Recent PDF
                 </button>
             </div>
+            </div>
+            ${state.currentUser === 'Manager' ? `
+            <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; text-align: center;">
+                <h3 style="margin-bottom: 1rem; color: var(--text);">Manager Tools</h3>
+                <input type="file" id="json-upload" accept=".json" style="display:none;" onchange="handleJsonUpload(event)">
+                <button class="btn" style="background:#8b5cf6; color:#fff; width: 100%; max-width: 400px; font-weight: 700; padding: 1rem; border-radius: 10px;" onclick="document.getElementById('json-upload').click()">
+                    📤 Upload & Edit Past Form (.json)
+                </button>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">Upload the .json data file that was downloaded with the PDF</p>
+            </div>
+            ` : ''}
         </div>
     `;
+}
+
+function handleJsonUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (!parsed.machine || !parsed.flow || !parsed.data) {
+                alert("Invalid form data file.");
+                return;
+            }
+            localStorage.setItem('lastSubmission', JSON.stringify(parsed));
+            renderEditPdf();
+        } catch (error) {
+            alert("Error reading JSON file.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function downloadFormDataAsJson(data, isHourly) {
+    const payload = {
+        machine: state.currentMachine,
+        category: state.currentCategory,
+        flow: isHourly ? 'non-daily' : 'daily',
+        data: data
+    };
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const prefix = isHourly ? 'HourlyQuality_' : 'Maintenance_';
+    a.download = `${prefix}${state.currentMachine}_${data.date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function goToCategory(flow) {
@@ -648,67 +756,154 @@ function generatePDF(data) {
     pdfDiv.style.color = '#000';
 
     const parameters = getParametersForCurrentCategory();
-    const paramRows = parameters.map((param, index) => `
+    const paramRows = parameters.map((param, index) => {
+        let status = data['status_'+index] || '';
+        let badgeClass = status === 'OK' ? 'pdf-badge-ok' : (status === 'NOT OK' ? 'pdf-badge-notok' : '');
+        let statusHtml = status ? `<div class="${badgeClass}">${status}</div>` : '';
+        
+        let pMain = param;
+        let pSub = '';
+        if (param.includes('(')) {
+            const parts = param.split('(');
+            pMain = parts[0].trim();
+            pSub = '(' + parts[1];
+        }
+
+        let extraHtml = '';
+        if (data['action_'+index]) extraHtml += `<div style="color: #0369a1; font-size: 9px; margin-top: 4px;"><strong>Action:</strong> ${data['action_'+index]}</div>`;
+        if (data['remarks_'+index]) extraHtml += `<div style="color: #9f1239; font-size: 9px; margin-top: 2px;"><strong>Remarks:</strong> ${data['remarks_'+index]}</div>`;
+
+        return `
         <tr>
-            <td style="border: 1px solid #000; padding: 5px; text-align: center;">${index + 1}</td>
-            <td style="border: 1px solid #000; padding: 5px;">${param}</td>
-            <td style="border: 1px solid #000; padding: 5px; text-align: center;">${data['status_'+index] || ''}</td>
-            <td style="border: 1px solid #000; padding: 5px;">${data['action_'+index] || ''}</td>
-            <td style="border: 1px solid #000; padding: 5px;">${data['remarks_'+index] || ''}</td>
+            <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+            <td>
+                <div style="font-weight: 600; color: #374151; margin-bottom: 2px; font-size: 11px;">${pMain}</div>
+                <div style="color: #6b7280; font-size: 9px; font-style: italic;">${pSub}</div>
+                ${extraHtml}
+            </td>
+            <td style="text-align: center; vertical-align: middle;">${statusHtml}</td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
+
+    let chillerHtml = '';
+    if (state.currentMachine === 'High Pressure Compressor') {
+        const chillerRows = (formParameters['Chiller'] || []).map((param, idx) => {
+            let status = data['chiller_status_'+idx] || '';
+            let badgeClass = status === 'OK' ? 'pdf-badge-ok' : (status === 'NOT OK' ? 'pdf-badge-notok' : '');
+            let statusHtml = status ? `<div class="${badgeClass}">${status}</div>` : '';
+            let pMain = param;
+            let pSub = '';
+            if (param.includes('(')) {
+                const parts = param.split('(');
+                pMain = parts[0].trim();
+                pSub = '(' + parts[1];
+            }
+            let extraHtml = '';
+            if (data['chiller_action_'+idx]) extraHtml += `<div style="color: #0369a1; font-size: 9px; margin-top: 4px;"><strong>Action:</strong> ${data['chiller_action_'+idx]}</div>`;
+            if (data['chiller_remarks_'+idx]) extraHtml += `<div style="color: #9f1239; font-size: 9px; margin-top: 2px;"><strong>Remarks:</strong> ${data['chiller_remarks_'+idx]}</div>`;
+
+            return `
+            <tr>
+                <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
+                <td>
+                    <div style="font-weight: 600; color: #374151; margin-bottom: 2px; font-size: 11px;">${pMain}</div>
+                    <div style="color: #6b7280; font-size: 9px; font-style: italic;">${pSub}</div>
+                    ${extraHtml}
+                </td>
+                <td style="text-align: center; vertical-align: middle;">${statusHtml}</td>
+            </tr>`;
+        }).join('');
+        chillerHtml = `
+            <div style="margin-top: 20px; font-size: 12px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 8px;">🧊 Chiller Check</div>
+            <table class="pdf-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%; text-align: center;">SL.NO</th>
+                        <th>CHILLER PARAMETERS / சில்லர் அளவுகோல்</th>
+                        <th style="width: 15%; text-align: center;">STATUS (நிலை)</th>
+                    </tr>
+                </thead>
+                <tbody>${chillerRows}</tbody>
+            </table>
+        `;
+    }
 
     pdfDiv.innerHTML = `
-        <div style="border: 2px solid #000; padding: 10px;">
-            <h1 style="text-align: center; text-transform: uppercase; margin: 0 0 10px 0; font-size: 18px;">${state.currentMachine} - ${state.currentCategory} MAINTENANCE REPORT</h1>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
-                <span><strong>DATE:</strong> ${data.date}</span>
-                <span><strong>SHIFT:</strong> ${data.shift}</span>
-                <span><strong>PRODUCT:</strong> ${data.product}</span>
+        <style>
+            .pdf-body { font-family: 'Inter', sans-serif; color: #333; }
+            .pdf-header-top { color: #d97706; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+            .pdf-title { color: #1e3a8a; font-size: 22px; font-weight: 700; margin: 0 0 12px 0; }
+            .pdf-divider { border-bottom: 2px solid #1e3a8a; margin-bottom: 25px; }
+            .pdf-meta-grid { display: flex; border: 1px solid #e5e7eb; margin-bottom: 30px; }
+            .pdf-meta-item { flex: 1; padding: 12px 15px; border-right: 1px solid #e5e7eb; }
+            .pdf-meta-item:last-child { border-right: none; background: #f9fafb; }
+            .pdf-meta-label { font-size: 9px; color: #6b7280; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+            .pdf-meta-value { font-size: 13px; color: #111827; font-weight: 700; }
+            .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px; }
+            .pdf-table th { background: #2b579a; color: #ffffff; padding: 12px 10px; text-align: left; font-weight: 600; font-size: 10px; }
+            .pdf-table td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+            .pdf-badge-ok { background: #bbf7d0; color: #166534; padding: 5px 14px; border-radius: 4px; font-weight: 700; font-size: 11px; text-align: center; display: inline-block; min-width: 50px; }
+            .pdf-badge-notok { background: #fecaca; color: #991b1b; padding: 5px 14px; border-radius: 4px; font-weight: 700; font-size: 11px; text-align: center; display: inline-block; min-width: 50px; }
+            .pdf-sig-header { color: #1e3a8a; font-size: 13px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px; margin-top: 10px; }
+            .pdf-sig-container { display: flex; gap: 20px; }
+            .pdf-sig-box { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0; background: #f9fafb; }
+            .pdf-sig-title { font-size: 11px; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; padding: 10px 12px; }
+            .pdf-sig-content { padding: 15px 12px; display: flex; justify-content: center; align-items: center; min-height: 60px; }
+            .pdf-sig-footer { font-size: 10px; color: #6b7280; padding: 10px 12px; border-top: 1px solid #e5e7eb; background: #fff; }
+        </style>
+        <div class="pdf-body">
+            <div class="pdf-header-top">MAINTENANCE PORTAL</div>
+            <h1 class="pdf-title">Daily Maintenance Form: ${state.currentMachine} (${state.currentCategory})</h1>
+            <div class="pdf-divider"></div>
+            
+            <div class="pdf-meta-grid">
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">DATE</div>
+                    <div class="pdf-meta-value">${data.date || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">SHIFT</div>
+                    <div class="pdf-meta-value">${data.shift || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">OPERATOR NAME</div>
+                    <div class="pdf-meta-value">${data.operator || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">NAME OF THE PRODUCT</div>
+                    <div class="pdf-meta-value">${data.product || '-'}</div>
+                </div>
             </div>
-            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+
+            <table class="pdf-table">
                 <thead>
-                    <tr style="background: #e8edf5;">
-                        <th style="border: 1px solid #000; padding: 5px;">SL</th>
-                        <th style="border: 1px solid #000; padding: 5px;">PARAMETERS</th>
-                        <th style="border: 1px solid #000; padding: 5px;">STATUS</th>
-                        <th style="border: 1px solid #000; padding: 5px;">ACTION</th>
-                        <th style="border: 1px solid #000; padding: 5px;">REMARKS</th>
+                    <tr>
+                        <th style="width: 8%; text-align: center;">SL.NO</th>
+                        <th>PARAMETERS CHECKLIST (அளவீடுகள்)</th>
+                        <th style="width: 15%; text-align: center;">STATUS (நிலை)</th>
                     </tr>
                 </thead>
                 <tbody>${paramRows}</tbody>
             </table>
-            ${state.currentMachine === 'High Pressure Compressor' ? `
-            <p style="font-weight:700; font-size:11px; margin: 15px 0 5px; text-transform:uppercase;">🧊 Chiller Check</p>
-            <table style="width:100%; border-collapse:collapse; font-size:10px;">
-                <thead>
-                    <tr style="background:#e0f2fe;">
-                        <th style="border:1px solid #000;padding:5px;">SL</th>
-                        <th style="border:1px solid #000;padding:5px;">CHILLER PARAMETERS</th>
-                        <th style="border:1px solid #000;padding:5px;">STATUS</th>
-                        <th style="border:1px solid #000;padding:5px;">ACTION</th>
-                        <th style="border:1px solid #000;padding:5px;">REMARKS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${(formParameters['Chiller'] || []).map((param, idx) => `
-                    <tr>
-                        <td style="border:1px solid #000;padding:5px;text-align:center;">${idx+1}</td>
-                        <td style="border:1px solid #000;padding:5px;">${param}</td>
-                        <td style="border:1px solid #000;padding:5px;text-align:center;">${data['chiller_status_'+idx] || ''}</td>
-                        <td style="border:1px solid #000;padding:5px;">${data['chiller_action_'+idx] || ''}</td>
-                        <td style="border:1px solid #000;padding:5px;">${data['chiller_remarks_'+idx] || ''}</td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>` : ''}
-            <div style="margin-top: 30px; display: flex; justify-content: space-between;">
-                <div style="text-align: center;">
-                    ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="height: 40px; display: block;">` : '<div style="height: 40px;"></div>'}
-                    <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 10px;">Checked By</div>
+
+            ${chillerHtml}
+
+            <div class="pdf-sig-header">SIGNATURES & APPROVALS (கையொப்பங்கள்)</div>
+            <div class="pdf-sig-container">
+                <div class="pdf-sig-box">
+                    <div class="pdf-sig-title">📝 செக் செய்தவர் கையொப்பம் (CHECKED BY)</div>
+                    <div class="pdf-sig-content">
+                        ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 50px;">` : '<div style="height: 50px;"></div>'}
+                    </div>
+                    <div class="pdf-sig-footer">Verified Log Badge</div>
                 </div>
-                <div style="text-align: center;">
-                    ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="height: 40px; display: block;">` : '<div style="height: 40px;"></div>'}
-                    <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 10px;">Manager</div>
+                <div class="pdf-sig-box">
+                    <div class="pdf-sig-title">👔 நிர்வாகி கையொப்பம் (MANAGER APPROVAL)</div>
+                    <div class="pdf-sig-content">
+                        ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 50px;">` : '<div style="height: 50px;"></div>'}
+                    </div>
+                    <div class="pdf-sig-footer">Authorized Approval Badge</div>
                 </div>
             </div>
         </div>
@@ -802,36 +997,74 @@ function generateHourlyPDF(data) {
     `;
 
     pdfDiv.innerHTML = `
-        <div style="background:#fff;color:#000;">
-            <h2 style="text-align:center;text-transform:uppercase;font-size:13px;font-weight:800;margin:0 0 8px 0;color:#000;">
-                ${state.currentMachine} &ndash; Hourly Quality Check
-            </h2>
-            <table style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #000;">
-                <tr>
-                    <td style="padding:5px 10px;font-size:10px;color:#000;width:34%;border-right:1px solid #000;"><strong>DATE:</strong>&nbsp;${data.date}</td>
-                    <td style="padding:5px 10px;font-size:10px;color:#000;width:33%;border-right:1px solid #000;text-align:center;"><strong>SHIFT:</strong>&nbsp;${data.shift}</td>
-                    <td style="padding:5px 10px;font-size:10px;color:#000;width:33%;text-align:right;"><strong>PRODUCT:</strong>&nbsp;${data.product}</td>
-                </tr>
-            </table>
-            <p style="font-size:9px;font-weight:700;margin:0 0 3px 0;color:#000;text-transform:uppercase;">PROCESSING PARAMETER (Once in Shift)</p>
-            <table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:10px;">
+        <style>
+            .pdf-body { font-family: 'Inter', sans-serif; color: #333; }
+            .pdf-header-top { color: #d97706; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+            .pdf-title { color: #1e3a8a; font-size: 22px; font-weight: 700; margin: 0 0 12px 0; }
+            .pdf-divider { border-bottom: 2px solid #1e3a8a; margin-bottom: 20px; }
+            .pdf-meta-grid { display: flex; border: 1px solid #e5e7eb; margin-bottom: 25px; }
+            .pdf-meta-item { flex: 1; padding: 10px 15px; border-right: 1px solid #e5e7eb; }
+            .pdf-meta-item:last-child { border-right: none; background: #f9fafb; }
+            .pdf-meta-label { font-size: 9px; color: #6b7280; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+            .pdf-meta-value { font-size: 13px; color: #111827; font-weight: 700; }
+            
+            .pdf-section-title { font-size:11px; font-weight:700; color:#1e3a8a; text-transform:uppercase; margin-bottom:8px; }
+            .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 9px; }
+            .pdf-table th { background: #2b579a; color: #ffffff; padding: 8px 4px; text-align: center; font-weight: 600; border: 1px solid #1e3a8a; }
+            .pdf-table td { padding: 6px 4px; border: 1px solid #e5e7eb; text-align: center; color: #374151; }
+            .pdf-table td.row-header { font-weight: 700; background: #f9fafb; text-align: left; }
+            
+            .pdf-sig-header { color: #1e3a8a; font-size: 13px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px; margin-top: 10px; }
+            .pdf-sig-container { display: flex; gap: 20px; }
+            .pdf-sig-box { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0; background: #f9fafb; }
+            .pdf-sig-title { font-size: 11px; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+            .pdf-sig-content { padding: 15px 12px; display: flex; justify-content: center; align-items: center; min-height: 60px; }
+            .pdf-sig-footer { font-size: 10px; color: #6b7280; padding: 10px 12px; border-top: 1px solid #e5e7eb; background: #fff; text-align: left; }
+        </style>
+        <div class="pdf-body">
+            <div class="pdf-header-top">MAINTENANCE PORTAL</div>
+            <h1 class="pdf-title">Hourly Quality Check: ${state.currentMachine} (${state.currentCategory})</h1>
+            <div class="pdf-divider"></div>
+            
+            <div class="pdf-meta-grid">
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">DATE</div>
+                    <div class="pdf-meta-value">${data.date || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">SHIFT</div>
+                    <div class="pdf-meta-value">${data.shift || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">OPERATOR NAME</div>
+                    <div class="pdf-meta-value">${data.operator || '-'}</div>
+                </div>
+                <div class="pdf-meta-item">
+                    <div class="pdf-meta-label">NAME OF THE PRODUCT</div>
+                    <div class="pdf-meta-value">${data.product || '-'}</div>
+                </div>
+            </div>
+
+            <div class="pdf-section-title">PROCESSING PARAMETER (Once in Shift)</div>
+            <table class="pdf-table">
                 <colgroup>
                     <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
                     <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
                     <col style="width:9%"><col style="width:10%"><col style="width:9%">
                 </colgroup>
                 <thead><tr>
-                    <th style="${thStyle}">ZONE HEAT</th><th style="${thStyle}">TEMP (°C)</th>
-                    <th style="${thStyle}">INJ.SPEED</th><th style="${thStyle}">INJ PRESS</th>
-                    <th style="${thStyle}">HOLD SPEED</th><th style="${thStyle}">HOLD PRESS</th>
-                    <th style="${thStyle}">INJ TIME</th><th style="${thStyle}">HOLD TIME</th>
-                    <th style="${thStyle}">COOL TIME</th><th style="${thStyle}">MOULD TEMP</th>
-                    <th style="${thStyle}">SCREW POS</th>
+                    <th>ZONE HEAT</th><th>TEMP (°C)</th>
+                    <th>INJ.SPEED</th><th>INJ PRESS</th>
+                    <th>HOLD SPEED</th><th>HOLD PRESS</th>
+                    <th>INJ TIME</th><th>HOLD TIME</th>
+                    <th>COOL TIME</th><th>MOULD TEMP</th>
+                    <th>SCREW POS</th>
                 </tr></thead>
                 <tbody>${processingRows}</tbody>
             </table>
-            <p style="font-size:9px;font-weight:700;margin:0 0 3px 0;color:#000;text-transform:uppercase;">DEFECT DETAILS (Hourly)</p>
-            <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+
+            <div class="pdf-section-title">DEFECT DETAILS (Hourly)</div>
+            <table class="pdf-table">
                 <colgroup>
                     <col style="width:8%">
                     <col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%"><col style="width:4.6%">
@@ -841,33 +1074,39 @@ function generateHourlyPDF(data) {
                     <col style="width:5.5%"><col style="width:5.5%"><col style="width:5.5%">
                 </colgroup>
                 <thead><tr>
-                    <th style="${thStyle}">TIME</th>
-                    <th style="${thStyle}">SET UP</th><th style="${thStyle}">START UP</th>
-                    <th style="${thStyle}">FLASH</th><th style="${thStyle}">WEIGHT</th>
-                    <th style="${thStyle}">SHOT</th><th style="${thStyle}">WARPAGE</th>
-                    <th style="${thStyle}">WELD LINE</th><th style="${thStyle}">FLOW MARK</th>
-                    <th style="${thStyle}">COLOUR</th><th style="${thStyle}">SCRATCH</th>
-                    <th style="${thStyle}">BLACK DOTS</th><th style="${thStyle}">PIN MARK</th>
-                    <th style="${thStyle}">THREAD</th><th style="${thStyle}">FITTINGS</th>
-                    <th style="${thStyle}">TOTAL</th>
-                    <th style="${thStyle}">SHIFT IN-CHARGE</th>
-                    <th style="${thStyle}">QUALITY SIGN</th>
-                    <th style="${thStyle}">PRODN HEAD</th>
+                    <th>TIME</th>
+                    <th>SET UP</th><th>START UP</th>
+                    <th>FLASH</th><th>WEIGHT</th>
+                    <th>SHOT</th><th>WARPAGE</th>
+                    <th>WELD LINE</th><th>FLOW MARK</th>
+                    <th>COLOUR</th><th>SCRATCH</th>
+                    <th>BLACK DOTS</th><th>PIN MARK</th>
+                    <th>THREAD</th><th>FITTINGS</th>
+                    <th>TOTAL</th>
+                    <th>SHIFT IN-CHARGE</th>
+                    <th>QUALITY SIGN</th>
+                    <th>PRODN HEAD</th>
                 </tr></thead>
                 <tbody>${defectDataRows}${totalRow}</tbody>
             </table>
-            <table style="width:100%;border-collapse:collapse;margin-top:20px;">
-                <tr>
-                    <td style="width:50%;text-align:center;border:none;padding:0 30px;vertical-align:bottom;">
-                        ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height:35px;display:block;margin:0 auto 5px;">` : `<div style="border-bottom:1px solid #000;height:35px;margin-bottom:5px;"></div>`}
-                        <p style="font-size:10px;color:#000;margin:0;font-weight:700;">Checked by Signature</p>
-                    </td>
-                    <td style="width:50%;text-align:center;border:none;padding:0 30px;vertical-align:bottom;">
-                        ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height:35px;display:block;margin:0 auto 5px;">` : `<div style="border-bottom:1px solid #000;height:35px;margin-bottom:5px;"></div>`}
-                        <p style="font-size:10px;color:#000;margin:0;font-weight:700;">Manager Signature</p>
-                    </td>
-                </tr>
-            </table>
+
+            <div class="pdf-sig-header">SIGNATURES & APPROVALS (கையொப்பங்கள்)</div>
+            <div class="pdf-sig-container">
+                <div class="pdf-sig-box">
+                    <div class="pdf-sig-title">📝 செக் செய்தவர் கையொப்பம் (CHECKED BY)</div>
+                    <div class="pdf-sig-content">
+                        ${data.sig_checker_base64 ? `<img src="${data.sig_checker_base64}" style="max-height: 50px;">` : '<div style="height: 50px;"></div>'}
+                    </div>
+                    <div class="pdf-sig-footer">Verified Log Badge</div>
+                </div>
+                <div class="pdf-sig-box">
+                    <div class="pdf-sig-title">👔 நிர்வாகி கையொப்பம் (MANAGER APPROVAL)</div>
+                    <div class="pdf-sig-content">
+                        ${data.sig_manager_base64 ? `<img src="${data.sig_manager_base64}" style="max-height: 50px;">` : '<div style="height: 50px;"></div>'}
+                    </div>
+                    <div class="pdf-sig-footer">Authorized Approval Badge</div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -876,6 +1115,8 @@ function generateHourlyPDF(data) {
 
     document.body.appendChild(pdfDiv);
     window.scrollTo(0, 0);
+
+    downloadFormDataAsJson(data, true);
 
     const opt = {
         margin:       5,
